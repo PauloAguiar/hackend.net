@@ -1,70 +1,75 @@
-CREATE UNLOGGED TABLE clients (
-   client_id SERIAL PRIMARY KEY,
-   client_name VARCHAR(50) NOT NULL,
-   client_limit INTEGER NOT NULL,
-   client_current INTEGER NOT NULL DEFAULT 0
-);
-
 CREATE UNLOGGED TABLE transactions (
-    transaction_id           SERIAL PRIMARY KEY,
-    client_id                INTEGER NOT NULL,
-    transaction_value        INTEGER NOT NULL,
-    transaction_type         CHAR(1)     NOT NULL,
-    transaction_description  VARCHAR(10) NOT NULL,
-    transaction_date         TIMESTAMP   NOT NULL,
-    CONSTRAINT transactions_client_id FOREIGN KEY (client_id) REFERENCES clients(client_id)
+    transaction_id                SERIAL PRIMARY KEY,
+    client_id                     INTEGER NOT NULL,
+    client_limit                  INTEGER NOT NULL,
+    client_current                INTEGER NOT NULL,
+    transaction_value             INTEGER NOT NULL,
+    transaction_type              CHAR(1)     NOT NULL,
+    transaction_description       VARCHAR(10) NOT NULL,
+    transaction_date              TIMESTAMP   NOT NULL,
+    transaction_logical_counter   INTEGER  NOT NULL
 );
 
-CREATE INDEX idx_transactions_client_id_date ON transactions (client_id, transaction_date DESC);
+ALTER TABLE transactions ADD CONSTRAINT unique_transaction_logical_counter UNIQUE (client_id, transaction_logical_counter);
 
-INSERT INTO clients (client_name, client_limit)
-  VALUES
-    ('o barato sai caro', 1000 * 100),
-    ('zan corp ltda', 800 * 100),
-    ('les cruders', 10000 * 100),
-    ('padaria joia de cocaia', 100000 * 100),
-    ('kid mais', 5000 * 100);
+CREATE INDEX idx_transactions_client_id_date ON transactions (client_id, transaction_logical_counter DESC);
+
+INSERT INTO transactions (client_id, client_limit, client_current, transaction_value, transaction_type, transaction_description, transaction_date, transaction_logical_counter)
+VALUES 
+    (1, 1000 * 100, 0, 0, 'n', 'Created', NOW(), 0),
+    (2, 800 * 100, 0, 0, 'n', 'Created', NOW(), 0),
+    (3, 10000 * 100, 0, 0, 'n', 'Created', NOW(), 0),
+    (4, 100000 * 100, 0, 0, 'n', 'Created', NOW(), 0),
+    (5, 5000 * 100, 0, 0, 'n', 'Created', NOW(), 0)
+;
 
 CREATE OR REPLACE FUNCTION create_transaction_for_client(
     p_client_id integer,
     p_transaction_value integer,
     p_transaction_type character,
     p_transaction_description character varying,
-    p_transaction_date timestamp without time zone,
     OUT result_code integer,
     OUT out_client_limit integer,
     OUT out_client_current integer)
 RETURNS RECORD
 LANGUAGE 'plpgsql'
 AS $$
+DECLARE
+    v_retry BOOLEAN := TRUE;
+    v_logical_counter INTEGER;
 BEGIN
-    -- Check if the client_id exists
-    SELECT client_limit, client_current INTO out_client_limit, out_client_current
-    FROM clients WHERE client_id = p_client_id
-    FOR UPDATE;
+    WHILE v_retry LOOP
+        -- Retrieve the latest transaction for the given client_id
+        SELECT client_limit, client_current, transaction_logical_counter INTO out_client_limit, out_client_current, v_logical_counter
+        FROM transactions
+        WHERE client_id = p_client_id
+        ORDER BY transaction_logical_counter DESC
+        LIMIT 1;
 
-    IF NOT FOUND THEN
-        result_code := 1;
-        RETURN;
-    END IF;
+        -- Check if there's no transaction found
+        IF NOT FOUND THEN
+            result_code := 1; -- Indicate an error or invalid client_id
+            RETURN;
+        END IF;
 
-    -- Check if the new client_current value is above the allowed limit
-    IF out_client_current + p_transaction_value < -1 * out_client_limit THEN
-        result_code := 2;
-        RETURN;
-    ELSE
-        result_code := 0;
-    END IF;
+        -- Calculate the potential new client_current
+        out_client_current := out_client_current + p_transaction_value;
 
-    -- Insert the transaction
-    INSERT INTO transactions (client_id, transaction_value, transaction_type, transaction_description, transaction_date)
-    VALUES (p_client_id, p_transaction_value, p_transaction_type, p_transaction_description, p_transaction_date);
+        -- Check if the transaction would cause client_current to go below -1 * client_limit
+        IF out_client_current < (-1 * out_client_limit) THEN
+            result_code := 2; -- Indicate transaction would exceed limit
+            RETURN;
+        END IF;
 
-    -- Update client's current value
-    out_client_current := out_client_current  + p_transaction_value;
-    UPDATE clients
-    SET client_current = out_client_current
-    WHERE client_id = p_client_id;
+        BEGIN
+            INSERT INTO transactions (client_id, client_limit, client_current, transaction_value, transaction_type, transaction_description, transaction_date, transaction_logical_counter)
+            VALUES (p_client_id, out_client_limit, out_client_current, p_transaction_value, p_transaction_type, p_transaction_description, NOW(), v_logical_counter + 1);
+
+            v_retry := FALSE;
+            result_code := 0;
+        EXCEPTION WHEN unique_violation THEN
+        END;
+    END LOOP;
 END;
 $$;
 
@@ -80,19 +85,48 @@ RETURNS TABLE(
 LANGUAGE 'plpgsql'
 AS $$
 BEGIN
-    -- First, return client details even if there are no transactions
     RETURN QUERY
-    SELECT c.client_limit, c.client_current, NULL::INTEGER, NULL::CHAR(1), NULL::VARCHAR(10), NULL::TIMESTAMP
-    FROM clients c
-    WHERE c.client_id = p_client_id;
+    SELECT t.client_limit, t.client_current, t.transaction_value, t.transaction_type, t.transaction_description, t.transaction_date
+    FROM transactions t
+    WHERE t.client_id = p_client_id
+    ORDER BY t.transaction_logical_counter DESC;
+END;
+$$;
 
-    -- Then, return transactions if they exist
-    RETURN QUERY
-    SELECT c.client_limit, c.client_current, t.transaction_value, t.transaction_type, t.transaction_description, t.transaction_date
-    FROM clients c
-    JOIN transactions t ON c.client_id = t.client_id
-    WHERE c.client_id = p_client_id
-    ORDER BY t.transaction_date DESC
-    LIMIT 10;
+CREATE OR REPLACE FUNCTION wipe_all_transactions()
+RETURNS void
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    TRUNCATE TABLE transactions;
+    INSERT INTO transactions (client_id, client_limit, client_current, transaction_value, transaction_type, transaction_description, transaction_date, transaction_logical_counter)
+    VALUES 
+        (1, 1000 * 100, 0, 0, 'n', 'Created', NOW(), 0),
+        (2, 800 * 100, 0, 0, 'n', 'Created', NOW(), 0),
+        (3, 10000 * 100, 0, 0, 'n', 'Created', NOW(), 0),
+        (4, 100000 * 100, 0, 0, 'n', 'Created', NOW(), 0),
+        (5, 5000 * 100, 0, 0, 'n', 'Created', NOW(), 0)
+    ;
+END;
+$$;
+
+CREATE OR REPLACE PROCEDURE prune_transactions(p_client_id INTEGER)
+LANGUAGE 'plpgsql'
+AS $$
+DECLARE
+    v_threshold_counter INTEGER;
+BEGIN
+    SELECT transaction_logical_counter INTO v_threshold_counter
+    FROM transactions
+    WHERE client_id = p_client_id
+    ORDER BY transaction_logical_counter DESC
+    LIMIT 1 OFFSET 11;
+
+    IF v_threshold_counter IS NULL THEN
+        RETURN;
+    END IF;
+
+    DELETE FROM transactions
+    WHERE client_id = p_client_id AND transaction_logical_counter < v_threshold_counter;
 END;
 $$;

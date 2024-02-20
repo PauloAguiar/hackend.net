@@ -8,13 +8,19 @@ using System.Text.Json;
 
 var builder = WebApplication.CreateSlimBuilder(args);
 
+builder.Services.AddLogging(logBuilder =>
+{
+    logBuilder.ClearProviders();
+});
+
+#if DEBUG
+builder.Services.AddSingleton((c) => new DatabaseService("Host=db;Port=5432;Database=rinha;User Id=admin;Password=password;MinPoolSize=40;MaxPoolSize=40;Include Error Detail=true;"));
+#else
+builder.Services.AddSingleton((c) => new DatabaseService("Host=db;Port=5432;Database=rinha;User Id=admin;Password=password;;MinPoolSize=40;MaxPoolSize=40;"));
+#endif
 var app = builder.Build();
 
-var database = new DatabaseService("Host=db;Port=5432;Database=rinha;User Id=admin;Password=password;Include Error Detail=true;");
-
-await database.InitializeAsync();
-
-app.MapPost("/clientes/{id}/transacoes", async ([FromRoute] int id, HttpRequest req) =>
+app.MapPost("/clientes/{id}/transacoes", async ([FromRoute] int id, HttpRequest req, DatabaseService database) =>
 {
     TransactionRequest? transactionReq;
     try
@@ -23,19 +29,20 @@ app.MapPost("/clientes/{id}/transacoes", async ([FromRoute] int id, HttpRequest 
     }
     catch (JsonException jsonEx)
     {
-        return Results.BadRequest();
+        return Results.UnprocessableEntity();
     }
 
     if (!TransactionIsValid(transactionReq))
     {
-        return Results.BadRequest();
+        return Results.UnprocessableEntity();
     }
+
     var result = await database.CreateTransaction(id, transactionReq);
 
     return result.ResultCode switch
     {
         0 => Results.Json(result.Response!, TransactionResponseContext.Default.TransactionResponse),
-        1 => Results.BadRequest(),
+        1 => Results.NotFound(),
         2 => Results.UnprocessableEntity(),
         _ => Results.Problem(detail: "Invalid database result", statusCode: StatusCodes.Status500InternalServerError)
     };
@@ -66,16 +73,23 @@ app.MapPost("/clientes/{id}/transacoes", async ([FromRoute] int id, HttpRequest 
     }
 });
 
-app.MapGet("/clientes/{id}/extrato", async ([FromRoute] int id) =>
+app.MapGet("/clientes/{id}/extrato", async ([FromRoute] int id, DatabaseService database) =>
 {
     var result = await database.GetStatement(id);
 
     return result.ResultCode switch
     {
         0 => Results.Json(result.Response!, StatementResponseContext.Default.StatementResponse),
-        1 => Results.BadRequest(),
+        1 => Results.NotFound(),
         _ => Results.Problem(detail: "Invalid database result", statusCode: StatusCodes.Status500InternalServerError)
     };
+});
+
+app.MapGet("/wipe", async (DatabaseService database) =>
+{
+    await database.Wipe();
+
+    return Results.Ok();
 });
 
 app.Run();
