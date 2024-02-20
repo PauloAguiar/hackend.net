@@ -8,15 +8,18 @@ using System.Text.Json;
 
 var builder = WebApplication.CreateSlimBuilder(args);
 
-builder.Services.AddLogging(logBuilder =>
+builder.Logging.ClearProviders();
+
+builder.WebHost.ConfigureKestrel(options =>
 {
-    logBuilder.ClearProviders();
+    options.AllowSynchronousIO = true;
+    options.AddServerHeader = false;
 });
 
 #if DEBUG
-builder.Services.AddSingleton((c) => new DatabaseService("Host=db;Port=5432;Database=rinha;User Id=admin;Password=password;MinPoolSize=40;MaxPoolSize=40;Include Error Detail=true;"));
+builder.Services.AddSingleton((c) => new DatabaseService("Host=db;Port=5432;Database=rinha;User Id=admin;Password=password;MinPoolSize=40;MaxPoolSize=40;SSL Mode=Disable;NoResetOnClose=true;Enlist=false;Max Auto Prepare=4;Multiplexing=true;Write Coalescing Buffer Threshold Bytes=1000;Include Error Detail=true;"));
 #else
-builder.Services.AddSingleton((c) => new DatabaseService("Host=db;Port=5432;Database=rinha;User Id=admin;Password=password;;MinPoolSize=40;MaxPoolSize=40;"));
+builder.Services.AddSingleton((c) => new DatabaseService("Host=db;Port=5432;Database=rinha;User Id=admin;Password=password;MinPoolSize=40;MaxPoolSize=40;SSL Mode=Disable;NoResetOnClose=true;Enlist=false;Max Auto Prepare=4;Multiplexing=true;Write Coalescing Buffer Threshold Bytes=1000;"));
 #endif
 var app = builder.Build();
 

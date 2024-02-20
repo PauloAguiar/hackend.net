@@ -3,26 +3,28 @@
 using Npgsql;
 
 using System.Collections.Concurrent;
+using System.Data.Common;
 
 namespace HackEnd.Net
 {
     public class DatabaseService
     {
         private readonly string connectionString;
-
+        private readonly NpgsqlDataSource dataSource;
         private readonly ConcurrentDictionary<int, int> transactionCounters = new();
 
         public DatabaseService(string connectionString)
         {
             this.connectionString = connectionString;
+            this.dataSource = new NpgsqlSlimDataSourceBuilder(connectionString).Build();
         }
 
         public record struct CreateTransactionResult(int ResultCode, TransactionResponse? Response);
 
         private async Task Prune(int clientId)
         {
-            using var connection = new NpgsqlConnection(this.connectionString);
-            await connection.OpenAsync();
+            using var connection = await this.dataSource.OpenConnectionAsync();
+
             using var cmd = new NpgsqlCommand("CALL prune_transactions(@client_id);", connection);
             cmd.Parameters.AddWithValue("client_id", clientId);
             await cmd.ExecuteNonQueryAsync();
@@ -30,8 +32,7 @@ namespace HackEnd.Net
 
         public async Task<CreateTransactionResult> CreateTransaction(int id, TransactionRequest transaction)
         {
-            using var connection = new NpgsqlConnection(this.connectionString);
-            await connection.OpenAsync();
+            using var connection = await this.dataSource.OpenConnectionAsync();
 
             using var cmd = new NpgsqlCommand("SELECT * FROM create_transaction_for_client(@client_id, @transaction_value, @transaction_type, @transaction_description);", connection);
 
@@ -74,8 +75,7 @@ namespace HackEnd.Net
 
         public async Task<GetStatementResult> GetStatement(int id)
         {
-            using var connection = new NpgsqlConnection(this.connectionString);
-            await connection.OpenAsync();
+            using var connection = await this.dataSource.OpenConnectionAsync();
 
             using var cmd = new NpgsqlCommand("SELECT * FROM get_client_transactions(@p_client_id)", connection);
             cmd.Parameters.AddWithValue("@p_client_id", id);
@@ -130,8 +130,7 @@ namespace HackEnd.Net
 
         public async Task Wipe()
         {
-            using var connection = new NpgsqlConnection(this.connectionString);
-            await connection.OpenAsync();
+            using var connection = await this.dataSource.OpenConnectionAsync();
 
             using var cmd = new NpgsqlCommand("SELECT wipe_all_transactions();", connection);
             await cmd.ExecuteNonQueryAsync();
