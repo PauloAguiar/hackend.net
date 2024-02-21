@@ -3,7 +3,6 @@
 using Npgsql;
 
 using System.Collections.Concurrent;
-using System.Data.Common;
 
 namespace HackEnd.Net
 {
@@ -42,9 +41,9 @@ namespace HackEnd.Net
             cmd.Parameters.AddWithValue("transaction_type", transaction.tipo);
             cmd.Parameters.AddWithValue("transaction_description", transaction.descricao);
 
-            cmd.Parameters.AddWithValue("result_code", 0); // Initial value, will be overwritten by function output
-            cmd.Parameters.AddWithValue("out_client_limit", 0); // Placeholder, will be set by function
-            cmd.Parameters.AddWithValue("out_client_current", 0); // Placeholder, will be set by function
+            cmd.Parameters.AddWithValue("result_code", 0);
+            cmd.Parameters.AddWithValue("out_client_limit", 0);
+            cmd.Parameters.AddWithValue("out_client_current", 0);
 
             using (var reader = await cmd.ExecuteReaderAsync())
             {
@@ -91,7 +90,7 @@ namespace HackEnd.Net
                 {
                     saldo = new StatementBalance
                     {
-                        data_extrato = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss.fffffff"),
+                        data_extrato = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss.ffffff"),
                         limite = reader.GetInt32(0),
                         total = reader.GetInt32(1)
                     },
@@ -114,7 +113,7 @@ namespace HackEnd.Net
                                 valor = Math.Abs(reader.GetInt32(2)),
                                 tipo = tipo,
                                 descricao = reader.GetString(4),
-                                realizada_em = reader.GetDateTime(5)
+                                realizada_em = reader.GetDateTime(5).ToString("yyyy-MM-ddTHH:mm:ss.ffffff")
                             });
                             count--;
                         }
@@ -124,7 +123,7 @@ namespace HackEnd.Net
 
                 result.ultimas_transacoes = transactions;
 
-                return new  GetStatementResult(0, result);
+                return new GetStatementResult(0, result);
             }
         }
 

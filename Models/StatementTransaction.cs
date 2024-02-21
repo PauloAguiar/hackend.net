@@ -13,5 +13,5 @@ public class StatementTransaction
     public int valor { get; set; }
     public char tipo { get; set; }
     public string descricao { get; set; }
-    public DateTime realizada_em { get; set; }
+    public string realizada_em { get; set; }
 }

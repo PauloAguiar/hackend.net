@@ -2,9 +2,9 @@
 
 # Use este script para executar testes locais
 
-RESULTS_WORKSPACE="/experiment/load-test/user-files/results"
-GATLING_BIN_DIR=/gatling/bin
-GATLING_WORKSPACE="/experiment/load-test/user-files"
+RESULTS_WORKSPACE="/experiments/load-test/user-files/results"
+GATLING_BIN_DIR=/opt/gatling/bin
+GATLING_WORKSPACE="/experiments/load-test/user-files"
 
 runGatling() {
     sh $GATLING_BIN_DIR/gatling.sh -rm local -s CustomTestRampUpToDrop \

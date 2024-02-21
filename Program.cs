@@ -1,5 +1,6 @@
 using HackEnd.Net;
 using HackEnd.Net.Models;
+using HackEnd.Net.ResponseBuffer;
 
 using Microsoft.AspNetCore.Mvc;
 
@@ -7,8 +8,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 
 var builder = WebApplication.CreateSlimBuilder(args);
-
-builder.Logging.ClearProviders();
 
 builder.WebHost.ConfigureKestrel(options =>
 {
@@ -19,6 +18,7 @@ builder.WebHost.ConfigureKestrel(options =>
 #if DEBUG
 builder.Services.AddSingleton((c) => new DatabaseService("Host=db;Port=5432;Database=rinha;User Id=admin;Password=password;MinPoolSize=40;MaxPoolSize=40;SSL Mode=Disable;NoResetOnClose=true;Enlist=false;Max Auto Prepare=4;Multiplexing=true;Write Coalescing Buffer Threshold Bytes=1000;Include Error Detail=true;"));
 #else
+builder.Logging.ClearProviders();
 builder.Services.AddSingleton((c) => new DatabaseService("Host=db;Port=5432;Database=rinha;User Id=admin;Password=password;MinPoolSize=40;MaxPoolSize=40;SSL Mode=Disable;NoResetOnClose=true;Enlist=false;Max Auto Prepare=4;Multiplexing=true;Write Coalescing Buffer Threshold Bytes=1000;"));
 #endif
 var app = builder.Build();
@@ -44,7 +44,7 @@ app.MapPost("/clientes/{id}/transacoes", async ([FromRoute] int id, HttpRequest 
 
     return result.ResultCode switch
     {
-        0 => Results.Json(result.Response!, TransactionResponseContext.Default.TransactionResponse),
+        0 => Results.Stream(stream: ResponsePooledBuffers.GetTransactionResponseStream(result.Response!), contentType: "application/json"),
         1 => Results.NotFound(),
         2 => Results.UnprocessableEntity(),
         _ => Results.Problem(detail: "Invalid database result", statusCode: StatusCodes.Status500InternalServerError)
@@ -80,9 +80,17 @@ app.MapGet("/clientes/{id}/extrato", async ([FromRoute] int id, DatabaseService 
 {
     var result = await database.GetStatement(id);
 
+    if (result.ResultCode == 0)
+    {
+        var response = result.Response!;
+        if (response.ultimas_transacoes.Count() < 10)
+            return Results.Json(result.Response!, StatementResponseContext.Default.StatementResponse);
+
+        return Results.Stream(stream: ResponsePooledBuffers.GetBalanceResponseStream(response), contentType: "application/json");
+
+    }
     return result.ResultCode switch
     {
-        0 => Results.Json(result.Response!, StatementResponseContext.Default.StatementResponse),
         1 => Results.NotFound(),
         _ => Results.Problem(detail: "Invalid database result", statusCode: StatusCodes.Status500InternalServerError)
     };
