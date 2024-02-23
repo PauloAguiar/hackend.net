@@ -11,6 +11,7 @@ var builder = WebApplication.CreateSlimBuilder(args);
 
 builder.WebHost.ConfigureKestrel(options =>
 {
+    options.Limits.KeepAliveTimeout = TimeSpan.FromMilliseconds(50);
     options.AllowSynchronousIO = true;
     options.AddServerHeader = false;
 });

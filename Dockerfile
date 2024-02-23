@@ -15,7 +15,7 @@ RUN apt-get update \
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["HackEnd.Net.csproj", "."]
-RUN dotnet restore "./././HackEnd.Net.csproj"
+RUN dotnet restore "./HackEnd.Net.csproj"
 COPY . .
 WORKDIR "/src/."
 RUN dotnet build "./HackEnd.Net.csproj" -c $BUILD_CONFIGURATION -o /app/build
