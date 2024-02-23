@@ -1,9 +1,7 @@
 services:
   api01: &api
     image: phaguiar/hackend:local
-    build: 
-      context: .
-      dockerfile: Dockerfile
+    build: ./Server
     container_name: instance0
     environment:
       - ASPNETCORE_URLS=http://+:3000

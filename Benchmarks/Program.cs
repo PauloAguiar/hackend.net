@@ -17,19 +17,19 @@ public class ApiCallBenchmark
     {
         client = new HttpClient();
         this.requestUri = new Uri("http://nginx:9999/clientes/2/transacoes");
-        this.requestUri2 = new Uri("http://nginx:9999/clientes/2/transacoes2");
+        this.requestUri2 = new Uri("http://nginx:9999/clientes/2/transacoesbuffer");
         string jsonContent = "{\"valor\":1,\"tipo\":\"d\",\"descricao\":\"devolve\"\r\n}";
         content = new StringContent(jsonContent, Encoding.UTF8,  "application/json");
     }
 
     [Benchmark]
-    public async Task PostTransacoesLockFreeAsync()
+    public async Task PostTransacoesSystemJsonAsync()
     {
         var response = await client.PostAsync(requestUri, content);
     }
 
     [Benchmark]
-    public async Task PostTransacoesLockAsync()
+    public async Task PostTransacoesBufferAsync()
     {
         var response = await client.PostAsync(requestUri2, content);
     }

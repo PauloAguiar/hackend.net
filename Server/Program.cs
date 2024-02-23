@@ -45,6 +45,59 @@ app.MapPost("/clientes/{id}/transacoes", async ([FromRoute] int id, HttpRequest 
 
     return result.ResultCode switch
     {
+        0 => Results.Json(result.Response!, TransactionResponseContext.Default.TransactionResponse),
+        1 => Results.NotFound(),
+        2 => Results.UnprocessableEntity(),
+        _ => Results.Problem(detail: "Invalid database result", statusCode: StatusCodes.Status500InternalServerError)
+    };
+
+    static bool TransactionIsValid([NotNullWhen(true)] TransactionRequest? transactionReq)
+    {
+        if (transactionReq == null)
+        {
+            return false;
+        }
+
+        if (transactionReq.valor < 1)
+        {
+            return false;
+        }
+
+        if (string.IsNullOrEmpty(transactionReq.descricao) || transactionReq.descricao.Length > 10)
+        {
+            return false;
+        }
+
+        if (transactionReq.tipo != 'd' && transactionReq.tipo != 'c')
+        {
+            return false;
+        }
+
+        return true;
+    }
+});
+
+app.MapPost("/clientes/{id}/transacoesbuffer", async ([FromRoute] int id, HttpRequest req, DatabaseService database) =>
+{
+    TransactionRequest? transactionReq;
+    try
+    {
+        transactionReq = await JsonSerializer.DeserializeAsync(req.Body, TransactionRequestContext.Default.TransactionRequest);
+    }
+    catch (JsonException jsonEx)
+    {
+        return Results.UnprocessableEntity();
+    }
+
+    if (!TransactionIsValid(transactionReq))
+    {
+        return Results.UnprocessableEntity();
+    }
+
+    var result = await database.CreateTransaction(id, transactionReq);
+
+    return result.ResultCode switch
+    {
         0 => Results.Stream(stream: ResponsePooledBuffers.GetTransactionResponseStream(result.Response!), contentType: "application/json"),
         1 => Results.NotFound(),
         2 => Results.UnprocessableEntity(),
