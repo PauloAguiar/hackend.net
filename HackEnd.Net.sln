@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.8.34322.80
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HackEnd.Net", "HackEnd.Net.csproj", "{D0417EE9-897B-4878-BB17-F868AEB01831}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Benchmarks", "Benchmarks\Benchmarks.csproj", "{26BA1D2A-AE70-4D1D-8038-325C3BBEE5B5}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HackEnd.Net", "Server\HackEnd.Net.csproj", "{E2882B50-5FC6-4CB6-8A01-7121196384E2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -13,14 +13,14 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{D0417EE9-897B-4878-BB17-F868AEB01831}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{D0417EE9-897B-4878-BB17-F868AEB01831}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{D0417EE9-897B-4878-BB17-F868AEB01831}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{D0417EE9-897B-4878-BB17-F868AEB01831}.Release|Any CPU.Build.0 = Release|Any CPU
 		{26BA1D2A-AE70-4D1D-8038-325C3BBEE5B5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{26BA1D2A-AE70-4D1D-8038-325C3BBEE5B5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{26BA1D2A-AE70-4D1D-8038-325C3BBEE5B5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{26BA1D2A-AE70-4D1D-8038-325C3BBEE5B5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E2882B50-5FC6-4CB6-8A01-7121196384E2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E2882B50-5FC6-4CB6-8A01-7121196384E2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E2882B50-5FC6-4CB6-8A01-7121196384E2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E2882B50-5FC6-4CB6-8A01-7121196384E2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

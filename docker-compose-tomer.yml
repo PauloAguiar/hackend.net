@@ -1,0 +1,111 @@
+version: "3.5"
+
+services:
+  redis:
+    image: redis
+    hostname: redis
+    user: root
+    network_mode: host
+    command: redis-server --port 0 --unixsocket /var/tmp/redis.sock --unixsocketperm 777 --latency-tracking no --save "" --appendonly no --maxclients 20000 --maxmemory 200mb --tcp-backlog 2000 --tcp-keepalive 100000
+    deploy:
+      resources:
+        limits:
+          cpus: '0.3'
+          memory: '30MB'
+        reservations:
+          cpus: '0.3'
+          memory: '30MB'
+    ulimits:
+      nofile:
+        soft: 1000000
+        hard: 1000000
+    volumes:
+      - ./tomer/tmp/:/var/tmp/:rw
+
+  tomer-api01: &api
+    image: tdlsimis/herebedragons
+    hostname: tomer-api01
+    user: root
+    environment:
+      - PORT=3000
+      - SOCK=/var/tmp/api01.sock
+      - RUST_BACKTRACE=1
+    expose:
+      - "3000"
+    volumes:
+      - ./tomer/dbs/:/app/dbs
+      - ./tomer/tmp/:/var/tmp/:rw
+    deploy:
+      resources:
+        limits:
+          cpus: "0.4"
+          memory: "180MB"
+        reservations:
+          cpus: "0.4"
+          memory: "180MB"
+    depends_on:
+      - redis
+      #- db
+    ulimits:
+      nofile:
+        soft: 1000000
+        hard: 1000000
+
+  tomer-api02:
+    <<: *api
+    hostname: tomer-api02
+    environment:
+      - PORT=3001
+      - SOCK=/var/tmp/api02.sock
+    expose:
+      - "3001"
+
+  tomer-nginx:
+    image: nginx:latest
+    user: root
+    volumes:
+      - ./nginx-tomer.conf:/etc/nginx/nginx.conf:ro
+      - ./tomer/tmp/:/var/tmp/:rw
+    depends_on:
+      - api01
+      - api02
+    ports:
+      - "10001:9999"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.4"
+          memory: "180MB"
+        reservations:
+          cpus: "0.4"
+          memory: "180MB"
+    ulimits:
+      nofile:
+        soft: 1000000
+        hard: 1000000
+    # logging:
+    #   driver: none
+
+  # db:
+  #   image: postgres:latest
+  #   hostname: db
+  #   environment:
+  #     - POSTGRES_PASSWORD=1234
+  #     - POSTGRES_USER=benji
+  #     - POSTGRES_DB=rinha
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+  #     - /var/run/postgresql/:/var/run/postgresql/:rw
+  #   command: postgres -c synchronous_commit=off -c autovacuum=off -c log_statement=none -c checkpoint_timeout=1h -c log_min_error_statement=PANIC -c log_min_messages=PANIC -c max_connections=500 -c fsync=off -c shared_buffers=75MB -c effective_cache_size=225MB -c maintenance_work_mem=256MB -c checkpoint_completion_target=0.9 -c wal_buffers=64MB -c default_statistics_target=100 -c random_page_cost=1.1 -c effective_io_concurrency=2 -c work_mem=4MB -c huge_pages=off -c min_wal_size=2GB -c max_wal_size=8GB -c max_worker_processes=4 -c max_parallel_workers_per_gather=2 -c max_parallel_workers=4 -c max_parallel_maintenance_workers=2 -c unix_socket_directories="/var/run/postgresql/"
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         cpus: "0.9"
+  #         memory: "380MB"
+
+networks:
+  default:
+    driver: bridge
+    name: hackend-network

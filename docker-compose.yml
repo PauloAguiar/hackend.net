@@ -1,46 +1,47 @@
 services:
-  api01: &api
+  ph-api01: &api
     image: phaguiar/hackend:local
     build: ./Server
-    container_name: instance0
     environment:
       - ASPNETCORE_URLS=http://+:3000
     depends_on:
-      - db
+      - phdb
     deploy:
       resources:
         limits:
           cpus: "0.2"
           memory: "80MB"
 
-  api02:
-    <<: *api 
-    container_name: instance1
+  ph-api02:
+    <<: *api
 
-  nginx:
-    ulimits:
-      nproc: 65535
-      nofile:
-        soft: 20000
-        hard: 40000
+  ph-nginx: &nginx
     image: nginx:latest
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - ./diag:/var/log/nginx
     depends_on:
-      - api01
-      - api02
+      - ph-api01
+      - ph-api02
     ports:
-      - "9999:9999"
+      - "10000:10000"
     deploy:
       resources:
         limits:
           cpus: "0.2"
           memory: "90MB"
 
-  db:
+  ph-nginx-exp:
+    <<: *nginx
+    volumes:
+      - ./nginx-exp.conf:/etc/nginx/nginx.conf:ro
+      - ./diag-exp:/var/log/nginx
+    ports:
+      - "10000:9999"
+    profiles: ["manual-start"]
+
+  phdb:
     image: postgres:latest
-    hostname: db
     environment:
       - POSTGRES_DB=rinha
       - POSTGRES_USER=admin
@@ -65,6 +66,7 @@ services:
       - ./experiment/conf/gatling.conf:/opt/gatling/conf/gatling.conf
       - ./experiment:/experiments
     stdin_open: true
+    profiles: ["manual-start"]
 
   benchmarks:
     image: phaguiar/benchmarks:local
@@ -79,9 +81,10 @@ services:
     ports:
       - "80:80"
     depends_on:
-      - db
+      - phdb
     volumes:
       - pgadmin-data:/var/lib/pgadmin
+    profiles: ["manual-start"]
 
 volumes:
   pgadmin-data:

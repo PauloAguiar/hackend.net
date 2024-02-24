@@ -3,6 +3,9 @@
 ##
 ## Get latest from `dotnet new gitignore`
 
+tomer/
+goku/
+
 # dotenv files
 .env
 

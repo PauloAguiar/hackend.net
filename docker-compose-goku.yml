@@ -1,0 +1,61 @@
+version: "3.5"
+
+services:
+  api01: &api
+    # Lembre-se de que seu serviço HTTP deve estar hospedado num repositório
+    # publicamente acessível! Ex.: hub.docker.com
+    image: vifonsec/rinha:latest
+    entrypoint: ["./start_main.sh"]
+    hostname: api01
+    volumes:
+      - ./goku/tmp:/tmp
+      - ./goku/mysqld:/run/mysqld
+    depends_on:
+      - db
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "50MB"
+    ipc: host
+    shm_size: 1M
+
+  api02:
+    # Essa sintaxe reusa o que foi declarado em 'api01'.
+    <<: *api
+    hostname: api02
+    command: ["--socket_path=/tmp/unix_socket_example2.sock"]
+
+  nginx:
+    image: vifonsec/nginx2:latest
+    volumes:
+      - ./goku/nginx2.conf:/etc/nginx/nginx.conf:ro
+      - ./goku/tmp:/tmp
+    depends_on:
+      - api01
+      - api02
+    ports:
+        # Obrigatório expor/usar a porta 9999 no load balancer!
+      - "10002:10002"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: "50MB"
+
+  db:
+    image: vifonsec/maria:latest
+    volumes:
+      - ./goku/mysqld:/run/mysqld
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: "350MB"
+    command: ['--sql-mode=NO_AUTO_VALUE_ON_ZERO', '--skip-log-bin', '--innodb-doublewrite=0', '--innodb-flush-log-at-trx-commit=0', '--query-cache-type=0', '--aria-pagecache-buffer-size=1M', '--performance-schema=0']
+
+networks:
+  default:
+    driver: bridge
+    name: hackend-network
+    

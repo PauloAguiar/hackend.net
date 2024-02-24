@@ -16,10 +16,10 @@ builder.WebHost.ConfigureKestrel(options =>
 });
 
 #if DEBUG
-builder.Services.AddSingleton((c) => new DatabaseService("Host=db;Port=5432;Database=rinha;User Id=admin;Password=password;MinPoolSize=40;MaxPoolSize=40;SSL Mode=Disable;NoResetOnClose=true;Enlist=false;Max Auto Prepare=4;Multiplexing=true;Write Coalescing Buffer Threshold Bytes=1000;Include Error Detail=true;"));
+builder.Services.AddSingleton((c) => new DatabaseService("Host=phdb;Port=5432;Database=rinha;User Id=admin;Password=password;MinPoolSize=40;MaxPoolSize=40;SSL Mode=Disable;NoResetOnClose=true;Enlist=false;Max Auto Prepare=4;Multiplexing=true;Write Coalescing Buffer Threshold Bytes=1000;Include Error Detail=true;"));
 #else
 builder.Logging.ClearProviders();
-builder.Services.AddSingleton((c) => new DatabaseService("Host=db;Port=5432;Database=rinha;User Id=admin;Password=password;MinPoolSize=40;MaxPoolSize=40;SSL Mode=Disable;NoResetOnClose=true;Enlist=false;Max Auto Prepare=4;Multiplexing=true;Write Coalescing Buffer Threshold Bytes=1000;"));
+builder.Services.AddSingleton((c) => new DatabaseService("Host=phdb;Port=5432;Database=rinha;User Id=admin;Password=password;MinPoolSize=40;MaxPoolSize=40;SSL Mode=Disable;NoResetOnClose=true;Enlist=false;Max Auto Prepare=4;Multiplexing=true;Write Coalescing Buffer Threshold Bytes=1000;"));
 #endif
 var app = builder.Build();
 
