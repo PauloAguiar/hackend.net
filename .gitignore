@@ -3,8 +3,11 @@
 ##
 ## Get latest from `dotnet new gitignore`
 
-tomer/
-goku/
+tomer/dbs/
+tomer/tmp/
+tomer/run/
+goku/mysqld
+goku/tmp
 
 # dotenv files
 .env
