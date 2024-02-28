@@ -29,8 +29,8 @@ public class ApiCallBenchmark
         this.requestUri5 = new Uri("http://ph-nginx:10000/clientes/4/transacoes");
         this.requestUri6 = new Uri("http://tomer-nginx:9999/clientes/4/transacoes");
 
-        string jsonContent = "{\"valor\":1,\"tipo\":\"d\",\"descricao\":\"devolve\"\r\n}";
-        content = new StringContent(jsonContent, Encoding.UTF8,  "application/json");
+        string jsonContent = "{\"valor\": 1, \"tipo\": \"d\", \"descricao\": \"devolve\"}";
+        content = new StringContent(jsonContent, Encoding.ASCII,  "application/json");
     }
 
     public async Task<bool> ValidateApiEndpointsAsync()
